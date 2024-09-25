@@ -28,9 +28,7 @@ int main(int argc, char * argv[]) {
 
     /*prototypes*/
     char ** parse_command_line(char *);
-    int handle_process_execution(pid_t,int,char **);
-
-    // ssize_t getline(char **lineptr, size_t *n, FILE *stream);
+    int handle_process_execution(char **);
 
     char *buf = NULL;
     size_t count = 0;
@@ -106,12 +104,25 @@ int main(int argc, char * argv[]) {
 
             /*replace in command first argument with the real executable*/
             command[0] = cmd;
+
             /* execute the process*/
-            int st = handle_process_execution(child_pid, status, command);
-            if(st != -1 && st != -1) {
-                status = st;
-                break;
-            }
+            /* note -> if child process is successful on the execution of the process, it will continue so we need to check it's actual success iwith the parent*/
+            int exec_trace = 0;
+            if(child_pid == 0) {
+                exec_trace = handle_process_execution(command);
+            } else {
+                /* parent waits for child otherwise*/   
+                pid_t w = wait(&status);
+                /* the parent checks if the child was successfull or not */
+                if(exec_trace == 0) break;
+
+                if(w == -1) {
+                    free(path_dup);
+                    free(first_cmd);
+                    free(cmd);
+                    exit(WAIT_FAILURE);
+                }
+            }  
 
             token = strtok(NULL,":");
             free(cmd);
@@ -125,21 +136,10 @@ int main(int argc, char * argv[]) {
 }
 
 
-int handle_process_execution(pid_t child_pid,int status, char **command){
+int handle_process_execution(char **command){
     int execution_trace = 0;
-    if(child_pid == 0) {
-        execution_trace = execve(command[0], command, NULL); 
-    } else {
-        /* parent waits for child otherwise*/   
-        pid_t w = wait(&status);
-        if(w == -1) {
-            exit(WAIT_FAILURE);
-        }
-    }  
-    /*-2 is used as return code to flag something bad happened */
-    if(execution_trace == -1) return -1;
-    if(status) {return status;} 
-    else {return -2;}
+    execution_trace = execve(command[0], command, NULL);
+    return execution_trace;
 }
 
 char ** parse_command_line(char * buf){
