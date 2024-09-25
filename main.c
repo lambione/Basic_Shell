@@ -32,6 +32,7 @@ int main(int argc, char * argv[]) {
     int handle_process_execution(char **);
     int change_directory(char **);
     void create_prompt(char *);
+    void handle_open(char **);
 
     char *buf = NULL;
     size_t count = 0;
@@ -89,7 +90,10 @@ int main(int argc, char * argv[]) {
             // system("cls"); /* this is used for windows */
             continue; // Skip the fork and exec part since we handled it
         }
-
+        if (strcmp(command[0], "open") == 0) {
+            handle_open(command);
+            continue; // Skip the fork and exec part since we handled it
+        } 
 
         /* handle the executables like ls, ls -l etc..*/
         char * token;
@@ -150,12 +154,40 @@ int main(int argc, char * argv[]) {
             token = strtok(NULL,":");
             free(cmd);
         }
+
         free(path_dup);
         free(first_cmd);
         
     }
     free(buf);
     return 0;
+}
+
+void handle_open(char ** command) {
+
+    int status;
+    pid_t pid = fork();
+
+    if(pid == -1) {
+        exit(1);
+    }
+    if(pid == 0) {
+
+        #ifdef __linux__
+            char *args[] = {"xdg-open", command[1], NULL}; 
+        #elif __APPLE__
+            char *args[] = {"open", command[1], NULL}; 
+        #elif _WIN32
+            char *args[] = {"notepad", command[1], NULL};
+        #else
+            perror("Unsupported OS\n");
+            exit(EXIT_FAILURE);
+        #endif
+
+        execvp(args[0], args);
+    } else {
+        wait(&status);
+    }
 }
 
 void create_prompt(char * shell_name) {
