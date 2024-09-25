@@ -56,17 +56,23 @@ int main(int argc, char * argv[]) {
         /*get environment PATH for the executables*/
         char * path = getenv("PATH");
         if(path == NULL) {
-            perror("No environment variabl found");
+            perror("No environment variable found");
+            exit(ENVIRONMENT_FAILURE);
+        }
+        /*make a copy of the env paths*/
+        char * path_dup = strdup(path);
+        if(!path_dup) {
             exit(ENVIRONMENT_FAILURE);
         }
 
         /* make a copy of the first command user input*/
         char * first_cmd = strdup(command[0]);
         if(!first_cmd) {
+            free(path_dup);
             exit(1);
         } 
         char * token;
-        token = strtok(path,":");
+        token = strtok(path_dup,":");
         while(token) {
 
             /* create child process */
@@ -74,6 +80,8 @@ int main(int argc, char * argv[]) {
             
             /* handle process execution */
             if (child_pid == -1) {
+                free(path_dup);
+                free(first_cmd);
                 perror("Failed to create child process");
                 exit(CHILD_PROCESS_FAILURE);
             }
@@ -86,6 +94,8 @@ int main(int argc, char * argv[]) {
             char * cmd;
             cmd = (char *)malloc(len + 2);
             if(!cmd) {
+                free(path_dup);
+                free(first_cmd);
                 exit(1);
             }
             /*create the command string*/
@@ -104,7 +114,10 @@ int main(int argc, char * argv[]) {
             }
 
             token = strtok(NULL,":");
+            free(cmd);
         }
+        free(path_dup);
+        free(first_cmd);
         
     }
     free(buf);
@@ -115,11 +128,6 @@ int main(int argc, char * argv[]) {
 int handle_process_execution(pid_t child_pid,int status, char **command){
     int execution_trace = 0;
     if(child_pid == 0) {
-        /* if child was created successfully than we can execute the command */
-        // if (execve(command[0], command, NULL) == -1) {
-        //         // perror("Couldn't execute");
-        //         // exit(EXECVE_FAILURE);
-        // }
         execution_trace = execve(command[0], command, NULL); 
     } else {
         /* parent waits for child otherwise*/   
