@@ -38,7 +38,9 @@ int main(int argc, char * argv[]) {
     ssize_t nread;
     pid_t child_pid;
     int status;
-    char * shell_name = "\n\033[1;34m[LAMBIONE'S SHELL]->[";
+    /*the initial value is the color*/
+    char * shell_name = "\033[1;34m[LAMBIONE'S SHELL]->[";
+    
 
     while (1) {
 
@@ -81,6 +83,11 @@ int main(int argc, char * argv[]) {
             /* change directory*/
             change_directory(command); 
             continue;
+        }
+        if (strcmp(command[0], "clear") == 0) {
+            system("clear");
+            // system("cls"); /* this is used for windows */
+            continue; // Skip the fork and exec part since we handled it
         }
 
 
@@ -190,7 +197,7 @@ void create_prompt(char * shell_name) {
 /* handle the change of directory */
 int change_directory(char ** command) {
     /* edge cases*/
-    unsigned command_len = strlen(command);
+    unsigned command_len = strlen((char *)command);
     if(command_len <= 1) {
         perror("please specify the path");
         exit(PATH_PROBLEM);
