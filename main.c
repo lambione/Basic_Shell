@@ -24,6 +24,7 @@ int main(int argc, char * argv[]) {
     #define CHILD_PROCESS_FAILURE 12
     #define EXECVE_FAILURE 11
     #define WAIT_FAILURE 10
+    #define ENVIRONMENT_FAILURE 9
 
     /*prototypes*/
     char ** parse_command_line(char *);
@@ -38,6 +39,7 @@ int main(int argc, char * argv[]) {
     int status;
 
     while (1) {
+        /* shell prompt */
         write(STDOUT_FILENO,"LAMBIONE'S SHELL $ ",20);
 
         /* read user input */
@@ -51,16 +53,57 @@ int main(int argc, char * argv[]) {
         char **command;
         command = (char **)parse_command_line(buf);
 
-        /* create child process */
-        child_pid = fork();
+        /*get environment PATH for the executables*/
+        char * path = getenv("PATH");
+        if(path == NULL) {
+            perror("No environment variabl found");
+            exit(ENVIRONMENT_FAILURE);
+        }
 
-        /* handle process execution */
-        if (child_pid == -1) {
-            perror("Failed to create child process");
-            exit(CHILD_PROCESS_FAILURE);
-        } else {
+        /* make a copy of the first command user input*/
+        char * first_cmd = strdup(command[0]);
+        if(!first_cmd) {
+            exit(1);
+        } 
+        char * token;
+        token = strtok(path,":");
+        while(token) {
+
+            /* create child process */
+            child_pid = fork();
+            
+            /* handle process execution */
+            if (child_pid == -1) {
+                perror("Failed to create child process");
+                exit(CHILD_PROCESS_FAILURE);
+            }
+
+            /* concatenate the environment path with the command */
+            /* initialize command string space*/
+            unsigned token_len = strlen(token);
+            unsigned command_len = strlen(first_cmd);
+            unsigned len = token_len + command_len;
+            char * cmd;
+            cmd = (char *)malloc(len + 2);
+            if(!cmd) {
+                exit(1);
+            }
+            /*create the command string*/
+            memcpy(cmd,token,token_len);
+            cmd[token_len] = '/';
+            memcpy(cmd+token_len +1,first_cmd,command_len);
+            cmd[token_len + 1 + command_len] = '\0';
+
+            /*replace in command first argument with the real executable*/
+            command[0] = cmd;
+            /* execute the process*/
             int st = handle_process_execution(child_pid, status, command);
-            if(st != -2) {status = st;}
+            if(st != -1 && st != -1) {
+                status = st;
+                break;
+            }
+
+            token = strtok(NULL,":");
         }
         
     }
@@ -68,23 +111,27 @@ int main(int argc, char * argv[]) {
     return 0;
 }
 
+
 int handle_process_execution(pid_t child_pid,int status, char **command){
+    int execution_trace = 0;
     if(child_pid == 0) {
         /* if child was created successfully than we can execute the command */
-        if (execve(command[0], command, NULL) == -1) {
-                perror("Couldn't execute");
-                exit(EXECVE_FAILURE);
-        }
+        // if (execve(command[0], command, NULL) == -1) {
+        //         // perror("Couldn't execute");
+        //         // exit(EXECVE_FAILURE);
+        // }
+        execution_trace = execve(command[0], command, NULL); 
     } else {
         /* parent waits for child otherwise*/   
         pid_t w = wait(&status);
         if(w == -1) {
-            perror("wait failed");
             exit(WAIT_FAILURE);
         }
     }  
     /*-2 is used as return code to flag something bad happened */
-    if(status) {return status;} else {return -2;}
+    if(execution_trace == -1) return -1;
+    if(status) {return status;} 
+    else {return -2;}
 }
 
 char ** parse_command_line(char * buf){
