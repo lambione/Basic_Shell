@@ -25,20 +25,25 @@ int main(int argc, char * argv[]) {
     #define EXECVE_FAILURE 11
     #define WAIT_FAILURE 10
     #define ENVIRONMENT_FAILURE 9
+    #define PATH_PROBLEM 8
 
     /*prototypes*/
     char ** parse_command_line(char *);
     int handle_process_execution(char **);
+    int change_directory(char **);
+    void create_prompt(char *);
 
     char *buf = NULL;
     size_t count = 0;
     ssize_t nread;
     pid_t child_pid;
     int status;
+    char * shell_name = "\n\033[1;34m[LAMBIONE'S SHELL]->[";
 
     while (1) {
-        /* shell prompt */
-        write(STDOUT_FILENO,"LAMBIONE'S SHELL $ ",20);
+
+        /* create the prompt every time*/
+        create_prompt(shell_name);
 
         /* read user input */
         nread = getline(&buf, &count, stdin);
@@ -57,18 +62,29 @@ int main(int argc, char * argv[]) {
             perror("No environment variable found");
             exit(ENVIRONMENT_FAILURE);
         }
+
         /*make a copy of the env paths*/
         char * path_dup = strdup(path);
         if(!path_dup) {
             exit(ENVIRONMENT_FAILURE);
         }
 
-        /* make a copy of the first command user input*/
+        /* make a copy of the first command user inputs*/
         char * first_cmd = strdup(command[0]);
         if(!first_cmd) {
             free(path_dup);
             exit(1);
         } 
+
+        /*manage the built-in like the cd command*/
+        if(strcmp(command[0], "cd") == 0) {
+            /* change directory*/
+            change_directory(command); 
+            continue;
+        }
+
+
+        /* handle the executables like ls, ls -l etc..*/
         char * token;
         token = strtok(path_dup,":");
         while(token) {
@@ -135,8 +151,61 @@ int main(int argc, char * argv[]) {
     return 0;
 }
 
+void create_prompt(char * shell_name) {
+
+    const char *white = "\033[1;37m";
+
+    /*retrieve current directory*/
+    char prompt_dir[1024];
+    char * curr_dir = getcwd(prompt_dir, sizeof(prompt_dir));
+    if (!curr_dir) {
+        perror("something went wrong");
+        exit(1);
+    }
+
+    /*reusable length*/
+    int name_len = strlen(shell_name);
+    int path_len = strlen(prompt_dir);
+    int white_len = strlen(white);
+
+    /*initialize memory for the prompt*/
+    char * prompt = malloc(sizeof(char *) *name_len + sizeof(char *) *path_len + sizeof(char*) *white_len + 3);
+    if (!prompt) {
+        exit(1);
+    }
+
+    /*create the prompt*/
+    memcpy(prompt, shell_name, name_len);
+    memcpy(prompt + name_len,prompt_dir,path_len);
+    prompt[name_len + path_len] = ']';
+    prompt[name_len + path_len + 1] = '$';
+    memcpy(prompt + name_len + path_len + 2,white,white_len);
+    prompt[name_len + path_len + white_len + 3] = '\0';
+
+    /* print shell prompt */
+    write(STDOUT_FILENO,prompt,strlen(prompt));
+
+}
+
+/* handle the change of directory */
+int change_directory(char ** command) {
+    /* edge cases*/
+    unsigned command_len = strlen(command);
+    if(command_len <= 1) {
+        perror("please specify the path");
+        exit(PATH_PROBLEM);
+    } 
+    /* change the directory */
+    char * path = command[1];
+    if(chdir(path) != 0) {
+        perror("no valid path");
+        exit(PATH_PROBLEM);
+    }
+    return 0;
+}
 
 int handle_process_execution(char **command){
+    /*execute process*/
     int execution_trace = 0;
     execution_trace = execve(command[0], command, NULL);
     return execution_trace;
@@ -164,25 +233,3 @@ char ** parse_command_line(char * buf){
     command[i] = NULL;
     return command;
 }
-
-/*getline function*/
-// if getline fails it return -1 
-    // otherwise it will return the number of characters read
-    // getline dynamically allocates memory for buf that we will need to free
-
-/*  THE FORK FUNCTION */
-// Description: The fork() function simply creates a child process by duplicating the calling process.
-// Return Value: On success, the PID (process ID) of the child process is returned in the parent and 0 is returned in the child. Otherwise, -1 is returned to the parent and no child is created.
-
-        // pid_t fork(void);
-
-/* THE WAIT FUNCTION */
-// Remember that with the child execution we want the parent to wait for the complete execution of the child.
-// Description: The wait() function causes the current process to wait until one of its child processes terminates. When a child process terminates, the wait() function returns the child process's exit status.
-// Return Value: On success, return PID of the terminated child otherwise -1 on error.
-
-/* THE EXECVE FUNCTION*/
-// Description: The execve() function is typically used to execute a new program referred to by the pathname variable as seen above. *The pathname is an executable file which is found on your system.
-    // Argv is a an array of strings
-    // Envp is also an array of strings (more on that later)
-    // Both Argv and Envp should be terminated by a NULL pointer.
