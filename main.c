@@ -21,6 +21,9 @@
 
 int main(int argc, char * argv[]) {
 
+    /*avoid warnings*/
+    (void)argc, (void)argv; 
+
     #define CHILD_PROCESS_FAILURE 12
     #define EXECVE_FAILURE 11
     #define WAIT_FAILURE 10
@@ -33,6 +36,8 @@ int main(int argc, char * argv[]) {
     int change_directory(char **);
     void create_prompt(char *);
     void handle_open(char **);
+    int check_built_in(char **);
+    int check_cmd_with_process(char **);
 
     char *buf = NULL;
     size_t count = 0;
@@ -54,6 +59,9 @@ int main(int argc, char * argv[]) {
             perror("Exiting shell");
             exit(1);
         } 
+
+        /* avoid core dump on the normal enter */
+        if(strcmp(buf, "\n") == 0) continue;
         
         /*parse command line*/
         char **command;
@@ -79,21 +87,8 @@ int main(int argc, char * argv[]) {
             exit(1);
         } 
 
-        /*manage the built-in like the cd command*/
-        if(strcmp(command[0], "cd") == 0) {
-            /* change directory*/
-            change_directory(command); 
-            continue;
-        }
-        if (strcmp(command[0], "clear") == 0) {
-            system("clear");
-            // system("cls"); /* this is used for windows */
-            continue; // Skip the fork and exec part since we handled it
-        }
-        if (strcmp(command[0], "open") == 0) {
-            handle_open(command);
-            continue; // Skip the fork and exec part since we handled it
-        } 
+        /*check for built in functions*/
+        if (check_built_in(command) == 0) continue;
 
         /* handle the executables like ls, ls -l etc..*/
         char * token;
@@ -163,31 +158,48 @@ int main(int argc, char * argv[]) {
     return 0;
 }
 
-void handle_open(char ** command) {
+int check_built_in(char ** command) {
 
-    int status;
-    pid_t pid = fork();
+    /* prototypes*/
+    int change_directory(char ** );
+    int echo_message(char **);
 
-    if(pid == -1) {
-        exit(1);
+    typedef int (*handler)(char **);
+
+    handler functions_to_call[] ={
+        change_directory,
+        echo_message,
+    }; 
+
+    char *built_in[] = {"cd","echo",NULL};
+
+    unsigned built_arr_len = 0;
+    for (char ** tmp = built_in; *tmp != NULL; ++tmp) {
+        ++built_arr_len;
     }
-    if(pid == 0) {
 
-        #ifdef __linux__
-            char *args[] = {"xdg-open", command[1], NULL}; 
-        #elif __APPLE__
-            char *args[] = {"open", command[1], NULL}; 
-        #elif _WIN32
-            char *args[] = {"notepad", command[1], NULL};
-        #else
-            perror("Unsupported OS\n");
-            exit(EXIT_FAILURE);
-        #endif
-
-        execvp(args[0], args);
-    } else {
-        wait(&status);
+    for(unsigned i = 0; i < built_arr_len;++i){
+        if(strcmp(command[0], built_in[i]) == 0) {
+            int success = 0 ;
+            success = functions_to_call[i](command);
+            if (success == 0) return 0; else break;
+        }
     }
+    return -1;
+
+}
+
+int echo_message(char ** command) {
+    /*echo everything that is after the word "echo"*/
+    unsigned command_len = 0;
+    for (char ** tmp = command; *tmp != NULL; ++tmp) {
+        ++command_len;
+    }
+    for (char ** tmp = ++command; *tmp != NULL; ++tmp) {
+        printf("%s ", *tmp);
+    }
+    printf("\n");
+    return 0;
 }
 
 void create_prompt(char * shell_name) {
@@ -232,21 +244,25 @@ int change_directory(char ** command) {
     unsigned command_len = strlen((char *)command);
     if(command_len <= 1) {
         perror("please specify the path");
-        exit(PATH_PROBLEM);
+        return -1;
     } 
     /* change the directory */
     char * path = command[1];
     if(chdir(path) != 0) {
         perror("no valid path");
-        exit(PATH_PROBLEM);
+        return -1;
     }
     return 0;
 }
 
 int handle_process_execution(char **command){
+
+    /*endures all environment variables are given*/
+    extern char**environ;
+
     /*execute process*/
     int execution_trace = 0;
-    execution_trace = execve(command[0], command, NULL);
+    execution_trace = execve(command[0], command, environ);
     return execution_trace;
 }
 
