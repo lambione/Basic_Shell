@@ -8,11 +8,11 @@ The prompt is custom for my shell but by changing the name in the script under t
 
 The shell provides the fiollowing features:
 builtin function :
-cd -> change directory
-executables :
-i.e ls, ls-l , cat etc...
-clear :
-clear command that clears the screen for linux users
+  - cd -> change directory
+  - executables :
+    i.e ls, ls-l , cat etc...
+  - clear :
+    clear command that clears the screen for linux users
 
 The shell has no :
   - foreground/background processes
