@@ -1,18 +1,21 @@
 Implementation of a complete shell from scratch
 
-The shell is implemented in C and takes into account all the possible functionalities a normal shell provides.
-This specific shell will provide additional custom features to provide a better flow in the use and to ease the user in some tasks.
+The shell is implemented in C and is meant to be an easy implementation of it, providing the basic functions that a shell normally has.
+This shell is an open source side project developed by Lamberto Ragnolini in the Fall semester 2024.
 
-For the moment the shell provides the fiollowing features:
+The main features of it are the ability of handling the built in functions cd and echo in addition with all the executables present in your system.
+The prompt is custom for my shell but by changing the name in the script under the shell_name variables you will be able to have *YOUR OWN PERSONAL PROMPT*
+
+The shell provides the fiollowing features:
 builtin function :
 cd -> change directory
 executables :
 i.e ls, ls-l , cat etc...
 clear :
 clear command that clears the screen for linux users
-open :
-it is implemented for all kind of OS's
 
-The shell is in development but everyone that would like to use some parts of the code is kindly requested to provide credit to the author.
+The shell has no :
+foreground/background processes
+history
+other builtin commands other than cd and echo
 
-Copyright Lamberto Ragnolini
