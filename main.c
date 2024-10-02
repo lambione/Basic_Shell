@@ -19,6 +19,22 @@
 /* realloc and malloc*/
 #include <stdlib.h>
 
+/* timestamps */
+#include <time.h>
+
+/* command object that has to be in the history */
+struct command_obj {
+    char ** command_line;
+    unsigned number;
+    char * time;
+};
+
+/* global history of the shell */
+static struct history {
+    struct command_obj * cmd;
+    struct command_obj * next;
+} global_history = {NULL,NULL};
+
 int main(int argc, char * argv[]) {
 
     /*avoid warnings*/
@@ -62,6 +78,11 @@ int main(int argc, char * argv[]) {
 
         /* avoid core dump on the normal enter */
         if(strcmp(buf, "\n") == 0) continue;
+
+        /* instantiate the history */
+
+        /* save the command in the history */
+
         
         /*parse command line*/
         char **command;
@@ -156,6 +177,28 @@ int main(int argc, char * argv[]) {
     }
     free(buf);
     return 0;
+}
+
+char * create_timestamp() {
+    /* Create a time_t variable to hold the current time */ 
+    time_t current_time;
+
+    /* Get the current time and store it in the current_time variable */
+    time(&current_time);
+
+    /* Convert the current time to a human-readable string */
+    char time_string[100];
+    struct tm *time_info;
+
+    /* Get the local time (you can use gmtime for UTC) */ 
+    time_info = localtime(&current_time);
+
+    /* Format the time as "YYYY-MM-DD HH:MM:SS" and store in time_string */
+    strftime(time_string, sizeof(time_string), "%Y-%m-%d %H:%M:%S", time_info);
+
+    // Print the timestamp
+    printf("Current Timestamp: %s\n", time_string);
+    return time_string;
 }
 
 int check_built_in(char ** command) {
