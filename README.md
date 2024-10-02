@@ -18,4 +18,8 @@ The shell has no :
   - foreground/background processes
   - history
   - other builtin commands other than cd and echo
+
+To run the shell use the following command :
+gcc -Wall -Wextra -pedantic *.c -o shell && ./shell
+
   
