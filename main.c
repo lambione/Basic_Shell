@@ -22,19 +22,6 @@
 /* timestamps */
 #include <time.h>
 
-/* command object that has to be in the history */
-struct command_obj {
-    char ** command_line;
-    unsigned number;
-    char * time;
-};
-
-/* global history of the shell */
-static struct history {
-    struct command_obj * cmd;
-    struct command_obj * next;
-} global_history = {NULL,NULL};
-
 int main(int argc, char * argv[]) {
 
     /*avoid warnings*/
@@ -78,11 +65,6 @@ int main(int argc, char * argv[]) {
 
         /* avoid core dump on the normal enter */
         if(strcmp(buf, "\n") == 0) continue;
-
-        /* instantiate the history */
-
-        /* save the command in the history */
-
         
         /*parse command line*/
         char **command;
@@ -91,6 +73,7 @@ int main(int argc, char * argv[]) {
         /*get environment PATH for the executables*/
         char * path = getenv("PATH");
         if(path == NULL) {
+            free(command);
             perror("No environment variable found");
             exit(ENVIRONMENT_FAILURE);
         }
@@ -98,12 +81,14 @@ int main(int argc, char * argv[]) {
         /*make a copy of the env paths*/
         char * path_dup = strdup(path);
         if(!path_dup) {
+            free(command);
             exit(ENVIRONMENT_FAILURE);
         }
 
         /* make a copy of the first command user inputs*/
         char * first_cmd = strdup(command[0]);
         if(!first_cmd) {
+            free(command);
             free(path_dup);
             exit(1);
         } 
@@ -121,6 +106,7 @@ int main(int argc, char * argv[]) {
             
             /* handle process execution */
             if (child_pid == -1) {
+                free(command);
                 free(path_dup);
                 free(first_cmd);
                 perror("Failed to create child process");
@@ -135,6 +121,7 @@ int main(int argc, char * argv[]) {
             char * cmd;
             cmd = (char *)malloc(len + 2);
             if(!cmd) {
+                free(command);
                 free(path_dup);
                 free(first_cmd);
                 exit(1);
@@ -160,6 +147,7 @@ int main(int argc, char * argv[]) {
                 if(exec_trace == 0) break;
 
                 if(w == -1) {
+                    free(command);
                     free(path_dup);
                     free(first_cmd);
                     free(cmd);
@@ -171,34 +159,13 @@ int main(int argc, char * argv[]) {
             free(cmd);
         }
 
+        free(command);
         free(path_dup);
         free(first_cmd);
         
     }
     free(buf);
     return 0;
-}
-
-char * create_timestamp() {
-    /* Create a time_t variable to hold the current time */ 
-    time_t current_time;
-
-    /* Get the current time and store it in the current_time variable */
-    time(&current_time);
-
-    /* Convert the current time to a human-readable string */
-    char time_string[100];
-    struct tm *time_info;
-
-    /* Get the local time (you can use gmtime for UTC) */ 
-    time_info = localtime(&current_time);
-
-    /* Format the time as "YYYY-MM-DD HH:MM:SS" and store in time_string */
-    strftime(time_string, sizeof(time_string), "%Y-%m-%d %H:%M:%S", time_info);
-
-    // Print the timestamp
-    printf("Current Timestamp: %s\n", time_string);
-    return time_string;
 }
 
 int check_built_in(char ** command) {
@@ -278,6 +245,9 @@ void create_prompt(char * shell_name) {
 
     /* print shell prompt */
     write(STDOUT_FILENO,prompt,strlen(prompt));
+
+    /*free the created object*/
+    free(prompt);
 
 }
 
