@@ -15,7 +15,7 @@ clear :
 clear command that clears the screen for linux users
 
 The shell has no :
-foreground/background processes
-history
-other builtin commands other than cd and echo
-
+  - foreground/background processes
+  - history
+  - other builtin commands other than cd and echo
+  
